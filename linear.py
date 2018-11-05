@@ -2,9 +2,6 @@ from __future__ import print_function
 
 import math
 
-from IPython import display
-from matplotlib import cm
-from matplotlib import gridspec
 from matplotlib import pyplot as plt
 import numpy as np
 import pandas as pd
@@ -16,9 +13,10 @@ tf.logging.set_verbosity(tf.logging.ERROR)
 pd.options.display.max_rows = 10
 pd.options.display.float_format = '{:.1f}'.format
 
-grade = pd.read_csv("./grade.csv", sep=",")
+grade = pd.read_csv("./gpa.csv", sep=",")
 
-print(grade)
+#print(grade)
+print(type(grade))
 
 def preprocess_features(grade):
   selected_features = grade[
@@ -39,17 +37,21 @@ def preprocess_targets(grade):
   return output_targets
 
 
-training_examples = preprocess_features(grade.head(80))
+training_examples = preprocess_features(grade.head(70))
 #training_examples.describe()
 print(training_examples)
-training_targets = preprocess_targets(grade.head(80))
+training_targets = preprocess_targets(grade.head(70))
 #training_targets.describe()
 
-validation_examples = preprocess_features(grade.tail(30))
+#validation_examples = preprocess_features(grade.tail(35))
 #validation_examples.describe()
+validation_examples = preprocess_features(grade[70:90])
 print(validation_examples)
-validation_targets = preprocess_targets(grade.tail(30))
+#validation_targets = preprocess_targets(grade.tail(35))
 #validation_targets.describe()
+validation_targets = preprocess_targets(grade[70:90])
+
+
 
 def my_input_fn(features, targets, batch_size=1, shuffle=True, num_epochs=None):
         
@@ -149,17 +151,33 @@ def train_model(
     plt.plot(training_rmse, label="training")
     plt.plot(validation_rmse, label="validation")
     plt.legend()
+    plt.show()
     
     return linear_regressor
 
 linear_regressor = train_model(
-    learning_rate=0.03,
-    steps=500,
-    batch_size=5,
+    learning_rate=0.000001,
+    steps=2000,
+    batch_size=1,
     training_examples=training_examples,
     training_targets=training_targets,
     validation_examples=validation_examples,
     validation_targets=validation_targets)
   
   
-  
+test_examples = preprocess_features(grade.tail(15))
+test_targets = preprocess_targets(grade.tail(15))
+
+predict_test_input_fn = lambda: my_input_fn(
+      test_examples, 
+      test_targets["univ_GPA"], 
+      num_epochs=1, 
+      shuffle=False)
+
+test_predictions = linear_regressor.predict(input_fn=predict_test_input_fn)
+test_predictions = np.array([item['predictions'][0] for item in test_predictions])
+
+root_mean_squared_error = math.sqrt(
+    metrics.mean_squared_error(test_predictions, test_targets))
+
+print("Final RMSE (on test data): %0.2f" % root_mean_squared_error)
